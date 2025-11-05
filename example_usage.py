@@ -11,9 +11,12 @@ from rag_plus import (
     ApplicationExample,
     LLMInterface,
     SimpleEmbeddingModel,
+    OpenAILLM,
+    OpenAIEmbeddingModel,
     compare_rag_vs_ragplus
 )
 import logging
+import os
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -264,6 +267,71 @@ def save_and_load_example():
     print("\n" + "="*80 + "\n")
 
 
+def openai_example():
+    """Example demonstrating RAG+ with real OpenAI API."""
+    print("\n" + "="*80)
+    print("OPENAI SDK INTEGRATION EXAMPLE")
+    print("="*80 + "\n")
+
+    # Check if API key is available
+    api_key = os.environ.get("OPENAI_API_KEY")
+    if not api_key:
+        print("⚠️  OPENAI_API_KEY not found in environment variables.")
+        print("This example will be skipped. To run it:")
+        print("1. Set your OpenAI API key: export OPENAI_API_KEY='your-key-here'")
+        print("2. Or pass it directly when initializing OpenAILLM(api_key='your-key')\n")
+        return
+
+    try:
+        # Initialize OpenAI components
+        print("Initializing OpenAI LLM and Embedding Model...")
+        llm = OpenAILLM(model="gpt-3.5-turbo")
+        embedding_model = OpenAIEmbeddingModel(model="text-embedding-3-small")
+
+        # Initialize RAG+ with OpenAI
+        rag_plus = RAGPlus(llm, embedding_model, top_k=2)
+
+        # Define a simple knowledge item
+        knowledge_items = [
+            KnowledgeItem(
+                id="calc_001",
+                content="""Power Rule for Derivatives: The derivative of x^n is n*x^(n-1). This is one of the most fundamental rules in calculus.""",
+                knowledge_type="procedural",
+                metadata={"category": "calculus", "domain": "mathematics"}
+            )
+        ]
+
+        # Build corpus
+        print("Building application corpus using OpenAI...")
+        applications = rag_plus.build_corpus(
+            knowledge_items,
+            use_generation=True,
+            use_matching=False
+        )
+
+        print(f"✓ Generated {len(applications)} application examples\n")
+
+        # Test query
+        test_query = "What is the derivative of x^3?"
+
+        print("Test Query:")
+        print(test_query)
+        print("\n" + "-"*80 + "\n")
+
+        # Generate answer using RAG+ with OpenAI
+        print("Generating answer with OpenAI GPT-3.5-turbo...")
+        answer = rag_plus.generate(test_query, task_type="math")
+
+        print("RAG+ Answer:")
+        print(answer)
+        print("\n" + "="*80 + "\n")
+
+    except Exception as e:
+        logger.error(f"Error in OpenAI example: {e}")
+        print(f"⚠️  Error: {e}")
+        print("Make sure you have a valid OpenAI API key and sufficient credits.\n")
+
+
 def main():
     """Run all examples."""
     print("""
@@ -279,23 +347,50 @@ def main():
 ╚══════════════════════════════════════════════════════════════════════════════╝
     """)
 
+    # Check if OpenAI API key is available
+    has_openai = os.environ.get("OPENAI_API_KEY") is not None
+
+    print("\n📋 CONFIGURATION:")
+    print(f"   OpenAI API Key: {'✓ Found' if has_openai else '✗ Not found (will use mock LLM)'}")
+    print()
+
     # Run examples for different domains
     try:
-        print("\n[1/4] Running Mathematics Example...")
+        if has_openai:
+            print("\n[1/5] Running OpenAI Integration Example...")
+            openai_example()
+
+            print("\n[2/5] Running Mathematics Example (Mock)...")
+        else:
+            print("\n[1/4] Running Mathematics Example (Mock)...")
+
         mathematics_example()
 
-        print("\n[2/4] Running Medical Example...")
+        if has_openai:
+            print("\n[3/5] Running Medical Example (Mock)...")
+        else:
+            print("\n[2/4] Running Medical Example (Mock)...")
         medical_example()
 
-        print("\n[3/4] Running Legal Example...")
+        if has_openai:
+            print("\n[4/5] Running Legal Example (Mock)...")
+        else:
+            print("\n[3/4] Running Legal Example (Mock)...")
         legal_example()
 
-        print("\n[4/4] Running Save/Load Example...")
+        if has_openai:
+            print("\n[5/5] Running Save/Load Example...")
+        else:
+            print("\n[4/4] Running Save/Load Example...")
         save_and_load_example()
 
         print("\n" + "="*80)
         print("All examples completed successfully!")
         print("="*80 + "\n")
+
+        if not has_openai:
+            print("💡 TIP: Set OPENAI_API_KEY environment variable to try OpenAI integration!")
+            print("   export OPENAI_API_KEY='your-api-key-here'\n")
 
     except Exception as e:
         logger.error(f"Error running examples: {e}", exc_info=True)

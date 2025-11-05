@@ -78,6 +78,164 @@ class SimpleEmbeddingModel(EmbeddingModel):
         return np.random.randn(len(texts), 384)
 
 
+class OpenAILLM(LLMInterface):
+    """OpenAI LLM implementation using the OpenAI SDK."""
+
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        model: str = "gpt-3.5-turbo",
+        organization: Optional[str] = None,
+        base_url: Optional[str] = None
+    ):
+        """
+        Initialize the OpenAI LLM interface.
+
+        Args:
+            api_key: OpenAI API key (if not provided, will use OPENAI_API_KEY env var)
+            model: Model name (default: gpt-3.5-turbo)
+            organization: OpenAI organization ID (optional)
+            base_url: Base URL for API calls (optional, for custom endpoints)
+        """
+        try:
+            from openai import OpenAI
+        except ImportError:
+            raise ImportError(
+                "OpenAI package not found. Please install it with: pip install openai>=1.0.0"
+            )
+
+        self.model = model
+
+        # Initialize OpenAI client
+        client_kwargs = {}
+        if api_key:
+            client_kwargs['api_key'] = api_key
+        if organization:
+            client_kwargs['organization'] = organization
+        if base_url:
+            client_kwargs['base_url'] = base_url
+
+        self.client = OpenAI(**client_kwargs)
+        logger.info(f"Initialized OpenAI LLM with model: {model}")
+
+    def generate(self, prompt: str, temperature: float = 0.0, max_tokens: int = 2048) -> str:
+        """
+        Generate text from the OpenAI LLM.
+
+        Args:
+            prompt: Input prompt
+            temperature: Sampling temperature (0.0 to 2.0)
+            max_tokens: Maximum tokens to generate
+
+        Returns:
+            Generated text
+        """
+        try:
+            logger.info(f"Generating response with OpenAI model: {self.model}")
+
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=temperature,
+                max_tokens=max_tokens
+            )
+
+            generated_text = response.choices[0].message.content
+            logger.info(f"Generated {len(generated_text)} characters")
+
+            return generated_text
+
+        except Exception as e:
+            logger.error(f"Error generating response from OpenAI: {e}")
+            raise
+
+
+class OpenAIEmbeddingModel(EmbeddingModel):
+    """OpenAI embedding model using the OpenAI SDK."""
+
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        model: str = "text-embedding-3-small",
+        organization: Optional[str] = None,
+        base_url: Optional[str] = None
+    ):
+        """
+        Initialize the OpenAI embedding model.
+
+        Args:
+            api_key: OpenAI API key (if not provided, will use OPENAI_API_KEY env var)
+            model: Embedding model name (default: text-embedding-3-small)
+            organization: OpenAI organization ID (optional)
+            base_url: Base URL for API calls (optional, for custom endpoints)
+        """
+        try:
+            from openai import OpenAI
+        except ImportError:
+            raise ImportError(
+                "OpenAI package not found. Please install it with: pip install openai>=1.0.0"
+            )
+
+        self.model = model
+
+        # Initialize OpenAI client
+        client_kwargs = {}
+        if api_key:
+            client_kwargs['api_key'] = api_key
+        if organization:
+            client_kwargs['organization'] = organization
+        if base_url:
+            client_kwargs['base_url'] = base_url
+
+        self.client = OpenAI(**client_kwargs)
+
+        # Get embedding dimensions based on model
+        self.dimensions = self._get_embedding_dimensions(model)
+        logger.info(f"Initialized OpenAI Embedding Model: {model} (dim={self.dimensions})")
+
+    def _get_embedding_dimensions(self, model: str) -> int:
+        """Get the embedding dimensions for a given model."""
+        # Mapping of known OpenAI embedding models to their dimensions
+        dimensions_map = {
+            "text-embedding-3-small": 1536,
+            "text-embedding-3-large": 3072,
+            "text-embedding-ada-002": 1536,
+        }
+        return dimensions_map.get(model, 1536)  # Default to 1536
+
+    def embed(self, texts: List[str]) -> np.ndarray:
+        """
+        Generate embeddings for a list of texts using OpenAI API.
+
+        Args:
+            texts: List of text strings to embed
+
+        Returns:
+            numpy array of shape (len(texts), embedding_dim)
+        """
+        try:
+            logger.info(f"Generating embeddings for {len(texts)} texts using {self.model}")
+
+            # OpenAI API supports batch embedding
+            response = self.client.embeddings.create(
+                model=self.model,
+                input=texts
+            )
+
+            # Extract embeddings from response
+            embeddings = [item.embedding for item in response.data]
+            embeddings_array = np.array(embeddings)
+
+            logger.info(f"Generated embeddings with shape: {embeddings_array.shape}")
+            return embeddings_array
+
+        except Exception as e:
+            logger.error(f"Error generating embeddings from OpenAI: {e}")
+            raise
+
+
 class ApplicationCorpusConstructor:
     """
     Constructs the application corpus aligned with knowledge corpus.

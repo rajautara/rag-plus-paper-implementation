@@ -31,42 +31,64 @@ cd rag-plus-implementation
 # Install dependencies
 pip install -r requirements.txt
 
+# Set up OpenAI API key (required for OpenAI integration)
+export OPENAI_API_KEY='your-api-key-here'
+
 # Optional: Install GPU support for FAISS
 pip install faiss-gpu
 ```
 
 ## Quick Start
 
+### Using OpenAI SDK
+
 ```python
-from rag_plus_core_implementation import RAGPlus, RAGPlusConfig, ApplicationExample
+import os
+from rag_plus import RAGPlus, KnowledgeItem, OpenAILLM, OpenAIEmbeddingModel
 
-# Initialize RAG+ system with OpenAI embeddings
-config = RAGPlusConfig(
-    embedding_model="text-embedding-3-small",  # OpenAI embedding model
-    embedding_type="openai",                # Use OpenAI embeddings
-    openai_api_key="your-api-key-here"      # Your OpenAI API key
-)
-rag_plus = RAGPlus(config)
+# Set your OpenAI API key (or export OPENAI_API_KEY environment variable)
+os.environ["OPENAI_API_KEY"] = "your-api-key-here"
 
-# Or use sentence-transformers embeddings
-config_st = RAGPlusConfig(
-    embedding_model="sentence-transformers/all-MiniLM-L6-v2",
-    embedding_type="sentence_transformer"
-)
-rag_plus_st = RAGPlus(config_st)
+# Initialize OpenAI components
+llm = OpenAILLM(model="gpt-3.5-turbo")  # or "gpt-4", "gpt-4-turbo", etc.
+embedding_model = OpenAIEmbeddingModel(model="text-embedding-3-small")
 
-# Build corpora with full construction pipeline
-existing_apps = [...]  # Optional existing applications
-rag_plus.build_corpora("knowledge_source.txt", "mathematics", existing_apps)
+# Initialize RAG+ system
+rag_plus = RAGPlus(llm, embedding_model, top_k=3)
 
-# Generate response with enhanced retrieval
-query = "How to solve this integration problem?"
-response = rag_plus.generate_response(query, "mathematics", use_reranking=True)
-print(response)
+# Define knowledge items
+knowledge_items = [
+    KnowledgeItem(
+        id="math_001",
+        content="The derivative of x^n is n*x^(n-1) according to the power rule.",
+        knowledge_type="procedural",
+        metadata={"category": "calculus"}
+    )
+]
 
-# Compare different retrieval methods
-baseline_response = rag_plus.get_retrieval_agnostic_response(query, "mathematics", "knowledge_only")
-apps_only_response = rag_plus.get_retrieval_agnostic_response(query, "mathematics", "applications_only")
+# Build application corpus
+applications = rag_plus.build_corpus(knowledge_items, use_generation=True)
+
+# Generate answer
+query = "What is the derivative of x^3?"
+answer = rag_plus.generate(query, task_type="math")
+print(answer)
+```
+
+### Alternative: Using Mock LLM (No API Key Required)
+
+```python
+from rag_plus import RAGPlus, KnowledgeItem, SimpleEmbeddingModel
+from example_usage import MockLLM
+
+# Use mock implementations for testing
+llm = MockLLM()
+embedding_model = SimpleEmbeddingModel()
+
+# Initialize RAG+ system
+rag_plus = RAGPlus(llm, embedding_model, top_k=3)
+
+# Rest is the same as above...
 ```
 
 ## Architecture
@@ -96,85 +118,120 @@ RAG+ System:
 
 ## Core Components
 
-### 1. Construction Pipeline
-- `ApplicationMatcher`: Category alignment and semantic matching
-- `ApplicationGenerator`: LLM-based application generation
-- `Reranker`: Cross-encoder based reranking
+### 1. LLM Interfaces
+- `LLMInterface`: Abstract base class for LLM implementations
+- `OpenAILLM`: OpenAI GPT integration (gpt-3.5-turbo, gpt-4, etc.)
+- `MockLLM`: Mock implementation for testing without API keys
 
-### 2. Enhanced Corpus Management
-- `KnowledgeCorpus`: Enhanced knowledge management
-- `ApplicationCorpus`: Many-to-many link management
-- `FAISSVectorStore`: Normalized vector storage with dynamic dimensions
+### 2. Embedding Models
+- `EmbeddingModel`: Abstract base class for embedding implementations
+- `OpenAIEmbeddingModel`: OpenAI embeddings (text-embedding-3-small, text-embedding-3-large)
+- `SimpleEmbeddingModel`: Placeholder for local embedding models
 
-### 3. RAG+ System
-- `RAGPlus`: Main system with full pipeline
-- Joint retrieval with semantic fallback
-- Retrieval-agnostic modularity
+### 3. Construction Pipeline
+- `ApplicationCorpusConstructor`: Builds application examples from knowledge
+- Category alignment and semantic matching
+- LLM-based application generation
 
-### 4. Evaluation Framework
-- `RAGPlusEvaluator`: Comprehensive evaluation system
-- Multi-domain dataset loaders
-- Method comparison and ablation studies
+### 4. Retrieval System
+- `RAGPlusRetriever`: Joint knowledge-application retrieval
+- Vector similarity search using embeddings
+- Top-k retrieval with configurable parameters
+
+### 5. Main System
+- `RAGPlus`: Complete RAG+ system
+- Corpus building and indexing
+- Query generation with application-aware reasoning
 
 ## Usage Examples
 
-### Full Pipeline Usage
+### Basic Usage with OpenAI
 
 ```python
-from rag_plus_core_implementation import RAGPlus, RAGPlusConfig, ApplicationExample, KnowledgeType
-
-# Configure system with OpenAI embeddings
-config = RAGPlusConfig(
-    embedding_model="text-embedding-3-small",  # OpenAI embedding model
-    embedding_type="openai",                # Use OpenAI embeddings
-    retrieval_top_k=3,
-    application_top_k=2,
-    llm_model="gpt-3.5-turbo",
-    openai_api_key="your-api-key-here"      # Your OpenAI API key
+import os
+from rag_plus import (
+    RAGPlus,
+    KnowledgeItem,
+    OpenAILLM,
+    OpenAIEmbeddingModel
 )
 
-# Or with sentence-transformers
-config_st = RAGPlusConfig(
-    embedding_model="sentence-transformers/all-MiniLM-L6-v2",
-    embedding_type="sentence_transformer",
-    retrieval_top_k=3,
-    application_top_k=2,
-    llm_model="gpt-3.5-turbo"
-)
+# Set API key
+os.environ["OPENAI_API_KEY"] = "your-api-key-here"
 
-# Initialize system with LLM client for generation
-rag_plus = RAGPlus(config, llm_client)
+# Initialize components
+llm = OpenAILLM(model="gpt-3.5-turbo")
+embedding_model = OpenAIEmbeddingModel(model="text-embedding-3-small")
+rag_plus = RAGPlus(llm, embedding_model, top_k=3)
 
-# Build corpora with existing applications
-existing_apps = [
-    ApplicationExample(
-        id="app_001",
-        knowledge_id="calc_001",
-        content="Worked example: Find derivative of x^3",
-        question="What is the derivative of x^3?",
-        answer="3x^2",
-        application_type="worked_example"
+# Create knowledge items
+knowledge_items = [
+    KnowledgeItem(
+        id="math_001",
+        content="Pythagorean theorem: a² + b² = c² for right triangles",
+        knowledge_type="conceptual",
+        metadata={"category": "geometry"}
+    ),
+    KnowledgeItem(
+        id="math_002",
+        content="Power rule: d/dx(x^n) = n*x^(n-1)",
+        knowledge_type="procedural",
+        metadata={"category": "calculus"}
     )
 ]
 
-rag_plus.build_corpora("knowledge_source.txt", "mathematics", existing_apps)
-
-# Generate response with reranking
-response = rag_plus.generate_response(
-    "What is the derivative of x^3?",
-    "mathematics",
-    use_reranking=True
+# Build corpus
+applications = rag_plus.build_corpus(
+    knowledge_items,
+    use_generation=True,
+    use_matching=False
 )
 
-# Compare retrieval methods
-methods = ["rag_plus", "knowledge_only", "applications_only"]
-for method in methods:
-    response = rag_plus.get_retrieval_agnostic_response(
-        "What is the derivative of x^3?",
-        "mathematics",
-        method
-    )
-    print(f"{method}: {response}")
+# Generate answer
+answer = rag_plus.generate("What is the derivative of x^5?", task_type="math")
+print(answer)
+
+# Save corpus for later use
+rag_plus.save_corpus("knowledge.json", "applications.json")
+
+# Load corpus in a new session
+rag_plus_new = RAGPlus(llm, embedding_model)
+rag_plus_new.load_corpus("knowledge.json", "applications.json")
+```
+
+### Advanced: Custom OpenAI Configuration
+
+```python
+from rag_plus import OpenAILLM, OpenAIEmbeddingModel
+
+# With explicit API key and organization
+llm = OpenAILLM(
+    api_key="your-api-key",
+    model="gpt-4",
+    organization="your-org-id"
+)
+
+# Using different embedding models
+embedding_small = OpenAIEmbeddingModel(model="text-embedding-3-small")  # 1536 dims
+embedding_large = OpenAIEmbeddingModel(model="text-embedding-3-large")  # 3072 dims
+embedding_ada = OpenAIEmbeddingModel(model="text-embedding-ada-002")    # 1536 dims
+
+# Custom base URL (for Azure OpenAI or custom endpoints)
+llm_custom = OpenAILLM(
+    model="gpt-3.5-turbo",
+    base_url="https://your-custom-endpoint.com/v1"
+)
+```
+
+### Running the Example Script
+
+```bash
+# With OpenAI API key
+export OPENAI_API_KEY='your-api-key-here'
+python example_usage.py
+
+# Without API key (uses mock LLM)
+python example_usage.py
 ```
 
 ### Framework Integration
@@ -248,28 +305,66 @@ response = requests.post("http://localhost:5000/query", json={
 print(response.json())
 ```
 
-## Configuration Options
+## Configuration
+
+### Environment Variables
+
+Set your OpenAI API key as an environment variable:
+
+```bash
+# Linux/Mac
+export OPENAI_API_KEY='your-api-key-here'
+
+# Windows (Command Prompt)
+set OPENAI_API_KEY=your-api-key-here
+
+# Windows (PowerShell)
+$env:OPENAI_API_KEY='your-api-key-here'
+```
+
+Or set it programmatically in Python:
 
 ```python
-config = RAGPlusConfig(
-    # Embedding settings
-    embedding_model="sentence-transformers/all-MiniLM-L6-v2",
-    
-    # Retrieval settings
-    retrieval_top_k=3,
-    application_top_k=2,
-    
-    # LLM settings
-    llm_model="gpt-3.5-turbo",
-    max_tokens=2048,
-    temperature=0.0,
-    
-    # Domain settings
-    domains=["mathematics", "legal", "medical"],
-    
-    # Performance settings
-    cache_embeddings=True,
-    batch_size=32
+import os
+os.environ["OPENAI_API_KEY"] = "your-api-key-here"
+```
+
+### OpenAI Models
+
+**LLM Models (for text generation):**
+- `gpt-3.5-turbo` (default, cost-effective)
+- `gpt-4` (more capable, higher cost)
+- `gpt-4-turbo` (faster GPT-4)
+- `gpt-4o` (latest multimodal model)
+
+**Embedding Models:**
+- `text-embedding-3-small` (default, 1536 dimensions, cost-effective)
+- `text-embedding-3-large` (3072 dimensions, higher quality)
+- `text-embedding-ada-002` (1536 dimensions, older model)
+
+### RAG+ Configuration
+
+```python
+from rag_plus import RAGPlus, OpenAILLM, OpenAIEmbeddingModel
+
+# Configure LLM
+llm = OpenAILLM(
+    model="gpt-3.5-turbo",  # or gpt-4, gpt-4-turbo, etc.
+    api_key="your-api-key",  # optional if using env var
+    organization="your-org"   # optional
+)
+
+# Configure embeddings
+embedding_model = OpenAIEmbeddingModel(
+    model="text-embedding-3-small",  # or text-embedding-3-large
+    api_key="your-api-key"           # optional if using env var
+)
+
+# Configure RAG+ system
+rag_plus = RAGPlus(
+    llm=llm,
+    embedding_model=embedding_model,
+    top_k=3  # number of knowledge-application pairs to retrieve
 )
 ```
 

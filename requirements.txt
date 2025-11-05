@@ -1,32 +1,33 @@
 # Core ML/NLP dependencies
-torch>=2.0.0
-transformers>=4.30.0
-sentence-transformers>=2.2.0
 numpy>=1.24.0
 scipy>=1.10.0
 
-# OpenAI for embeddings and LLM
+# OpenAI for embeddings and LLM (required for OpenAILLM and OpenAIEmbeddingModel)
 openai>=1.0.0
 
-# Cross-encoder for reranking
-cross-encoder>=1.0.0
+# Optional: Local embedding models (uncomment if needed)
+# torch>=2.0.0
+# transformers>=4.30.0
+# sentence-transformers>=2.2.0
 
-# Vector databases
-faiss-cpu>=1.7.0
-chromadb>=0.4.0
+# Optional: Cross-encoder for reranking (uncomment if needed)
+# cross-encoder>=1.0.0
 
-# Data processing
-pandas>=2.0.0
-datasets>=2.12.0
-scikit-learn>=1.3.0
+# Optional: Vector databases (uncomment if needed)
+# faiss-cpu>=1.7.0
+# chromadb>=0.4.0
 
-# RAG frameworks
-langchain>=0.0.300
-llama-index>=0.8.0
+# Optional: Data processing (uncomment if needed)
+# pandas>=2.0.0
+# datasets>=2.12.0
+# scikit-learn>=1.3.0
 
-# LLM APIs
-openai>=1.0.0
-anthropic>=0.7.0
+# Optional: RAG frameworks (uncomment if needed)
+# langchain>=0.0.300
+# llama-index>=0.8.0
+
+# Optional: Other LLM APIs (uncomment if needed)
+# anthropic>=0.7.0
 
 # Web framework for API
 flask>=2.3.0
