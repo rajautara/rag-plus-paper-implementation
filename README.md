@@ -440,17 +440,41 @@ mypy rag_plus_core_implementation.py
 ## Project Structure
 
 ```
-rag-plus-implementation/
-├── rag_plus_core_implementation.py    # Core RAG+ implementation
-├── rag_plus_evaluation.py             # Evaluation framework
-├── rag_plus_integration.py            # Framework integrations
-├── rag_plus_implementation_plan.md     # Detailed implementation plan
-├── requirements.txt                   # Dependencies
+rag-plus-paper-implementation/
+├── rag_plus.py                       # Core RAG+ implementation
+│   ├── KnowledgeItem                 # Knowledge corpus data structure
+│   ├── ApplicationExample            # Application corpus data structure
+│   ├── LLMInterface                  # Abstract LLM interface
+│   ├── OpenAILLM                     # OpenAI LLM implementation
+│   ├── EmbeddingModel                # Abstract embedding interface
+│   ├── OpenAIEmbeddingModel          # OpenAI embedding implementation
+│   ├── SimpleEmbeddingModel          # Placeholder embedding model
+│   ├── ApplicationCorpusConstructor  # Application generation & matching
+│   ├── RAGPlusRetriever              # Knowledge-application retrieval
+│   └── RAGPlus                       # Main RAG+ system
+├── example_usage.py                  # Comprehensive usage examples
+│   ├── MockLLM                       # Mock LLM for testing
+│   ├── mathematics_example()         # Math domain demo
+│   ├── medical_example()             # Medical domain demo
+│   ├── legal_example()               # Legal domain demo
+│   └── openai_example()              # OpenAI integration demo
+├── requirements.txt                  # Python dependencies
+├── IMPLEMENTATION_SUMMARY.md         # Implementation details
+├── 2506.11555v4.pdf                  # Original research paper
 ├── README.md                         # This file
-├── tests/                            # Test files
-├── examples/                         # Usage examples
-├── configs/                          # Configuration files
+├── tests/                            # Unit and integration tests
+│   ├── test_rag_plus.py             # Core functionality tests
+│   ├── test_embeddings.py           # Embedding model tests
+│   └── test_integration.py          # Integration tests
+├── examples/                         # Domain-specific examples
+│   ├── math_examples.py             # Mathematics domain examples
+│   ├── medical_examples.py          # Medical domain examples
+│   └── legal_examples.py            # Legal domain examples
 └── docs/                            # Documentation
+    ├── API.md                       # API reference
+    ├── ARCHITECTURE.md              # Architecture overview
+    ├── QUICKSTART.md                # Quick start guide
+    └── DEPLOYMENT.md                # Deployment guide
 ```
 
 ## Contributing
